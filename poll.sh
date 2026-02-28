@@ -5,8 +5,10 @@
 # creates a ./hitron-data/ directory, and writes json of results to a file with each run.
 
 ##############################################
+# functions
 
 # make a quiet request to the endpoint, skip cert check
+# no curl retries, as this will likely be run again on its own
 make_req () {
 	local endpoint="$1"
 	local varname="$2"
@@ -22,18 +24,8 @@ make_req () {
 	printf -v "$varname" '%s' "$result"
 }
 
-################
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-
-# common modem ip
-HOST="192.168.100.1"
-
-# endpoints for modem data returning json.
-# thanks DannyTheVito
-DS_QAM_URL="https://$HOST/data/dsinfo.asp"
-US_QAM_URL="https://$HOST/data/usinfo.asp"
-DS_OFDM_URL="https://$HOST/data/dsofdminfo.asp"
-US_OFDM_URL="https://$HOST/data/usofdminfo.asp"
+##############################################
+# main
 
 ################
 # Check for curl
@@ -47,20 +39,55 @@ if ! command -v jq >/dev/null 2>&1; then
     echo "Error: jq is not installed or not found in PATH" >&2
     exit 1
 fi
+
 ################
-TS="$(date +"%Y%m%d_%H%M%S")"
+# set variables
+
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
+# common modem ip
+HOST="192.168.100.1"
+
+# endpoints for modem data returning json.
+# thanks DannyTheVito
+DS_QAM_URL="https://$HOST/data/dsinfo.asp"
+US_QAM_URL="https://$HOST/data/usinfo.asp"
+DS_OFDM_URL="https://$HOST/data/dsofdminfo.asp"
+US_OFDM_URL="https://$HOST/data/usofdminfo.asp"
+
+TS_FIELD="timestamp"
+
+# base timestamp, formatted for a filename, and as common datetime
+BASE_TS=$(date +%s)
+FILE_TS_SUFFIX="$(date -d "@$BASE_TS" +"%Y%m%d_%H%M%S")"
+MEASUREMENT_TS="$(date -d "@$BASE_TS" +"%Y-%m-%d %H:%M:%S")"
 
 TARGET_DIR="$SCRIPT_DIR/hitron-data"
 
+OUT_FILE="$TARGET_DIR/data-$FILE_TS_SUFFIX.json"
+
+################
+# Check for curl
+if ! command -v curl >/dev/null 2>&1; then
+    echo "Error: curl is not installed or not found in PATH" >&2
+    exit 1
+fi
+
+# Check for jq
+if ! command -v jq >/dev/null 2>&1; then
+    echo "Error: jq is not installed or not found in PATH" >&2
+    exit 1
+fi
+
+################
+# create the target directory if it's missing
 if ! [ -d "$TARGET_DIR" ]; then
 	#echo "Creating directory $TARGET_DIR"
 	mkdir -p "$TARGET_DIR"
 fi
 
-FILE="$TARGET_DIR/data-$TS.json"
-
 ################
-# curl commands to the endpoints
+# curl commands to the device endpoints- expect json response
 
 # downstream qam
 make_req "$DS_QAM_URL" DS_QAM_OUTPUT
@@ -74,15 +101,18 @@ make_req "$DS_OFDM_URL" DS_OFDM_OUTPUT
 # upstream ofdm
 make_req "$US_OFDM_URL" US_OFDM_OUTPUT
 
-OUT_FILE="$TARGET_DIR/data-$TS.json"
+################
+# aggregate results into one json doc, and add a timestamp in the data
 
-#echo "$DS_QAM_OUTPUT $US_QAM_OUTPUT $DS_OFDM_OUTPUT $US_OFDM_OUTPUT" |
 jq -n\
+ --arg timestamp "$MEASUREMENT_TS"\
+ --arg timestamp_field "$TS_FIELD"\
  --argjson ds_qam "$DS_QAM_OUTPUT"\
  --argjson us_qam "$US_QAM_OUTPUT"\
  --argjson ds_ofdm "$DS_OFDM_OUTPUT"\
  --argjson us_ofdm "$US_OFDM_OUTPUT"\
- '{ds_qam: $ds_qam, us_qam: $us_qam, ds_ofdm: $ds_ofdm, us_ofdm: $us_ofdm}' > "$OUT_FILE" || {
+ '.[$timestamp_field] = $timestamp | .ds_qam = $ds_qam | .us_qam = $us_qam | .ds_ofdm = $ds_ofdm | .us_ofdm = $us_ofdm'\
+ > "$OUT_FILE" || {
 	echo "Error: parsing json result" >&2
         exit 1
 }
