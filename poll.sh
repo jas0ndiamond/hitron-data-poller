@@ -7,14 +7,15 @@
 ##############################################
 # functions
 
-# make a quiet request to the endpoint, skip cert check
+# make a quiet request to the endpoint
+# if using https as protocol, skip cert check with -k
 # no curl retries, as this will likely be run again on its own
 make_req () {
 	local endpoint="$1"
 	local varname="$2"
 
 	local result
-	result=$(curl -k -s -f -H "Accept: application/json" "$endpoint" || {
+	result=$(curl -s -f -H "Accept: application/json" "$endpoint" || {
                  echo "Error: Failed to fetch $endpoint" >&2
                  exit 1
                 }
@@ -48,12 +49,14 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 # common modem ip
 HOST="192.168.100.1"
 
+PROTO="http"
+
 # endpoints for modem data returning json.
 # thanks DannyTheVito
-DS_QAM_URL="https://$HOST/data/dsinfo.asp"
-US_QAM_URL="https://$HOST/data/usinfo.asp"
-DS_OFDM_URL="https://$HOST/data/dsofdminfo.asp"
-US_OFDM_URL="https://$HOST/data/usofdminfo.asp"
+DS_QAM_URL="$PROTO://$HOST/data/dsinfo.asp"
+US_QAM_URL="$PROTO://$HOST/data/usinfo.asp"
+DS_OFDM_URL="$PROTO://$HOST/data/dsofdminfo.asp"
+US_OFDM_URL="$PROTO://$HOST/data/usofdminfo.asp"
 
 TS_FIELD="timestamp"
 
