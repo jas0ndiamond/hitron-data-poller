@@ -17,7 +17,7 @@ Run as a cronjob or with unix `watch`.
 ---
 ### Run
 1. Run the shell script, and look for json files created in `./hitron-data`.
-3. Graph with local tools like gnuplot, or post to a MongoDB/InfluxDB instance and view with a Grafana dashboard.
+2. Graph with local tools like gnuplot, or post to a MongoDB/InfluxDB instance and view with a Grafana dashboard.
 
 ---
 ### Notes
