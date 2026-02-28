@@ -18,6 +18,15 @@ Run as a cronjob or with unix `watch`.
 ### Run
 1. Run the shell script, and look for json files created in `./hitron-data`.
 2. Graph with local tools like gnuplot, or post to a MongoDB/InfluxDB instance and view with a Grafana dashboard.
+3. Retrieve field data with `jq`:
+```
+$ jq .ds_qam[3].snr < data-20260000_000000.json
+"38.605"
+```
+```
+$ jq -r '"\(.timestamp) => \(.ds_qam[3].snr)"' data-20260000_000000.json
+2026-02-27 21:24:01 => 38.605
+```
 
 ---
 ### Notes
