@@ -16,7 +16,7 @@ Run as a cronjob or with unix `watch`.
 
 ---
 ### Run
-1. Run the shell script, and look for json files created in `./hitron-data`.
+1. Run the shell script via `/path/to/poll.sh`, and look for json files created in `./hitron-data`.
 2. Graph with local tools like gnuplot, or post to a MongoDB/InfluxDB instance and view with a Grafana dashboard.
 3. Retrieve field data with `jq`:
 ```
@@ -32,3 +32,4 @@ $ jq -r '"\(.timestamp) => \(.ds_qam[3].snr)"' data-20260000_000000.json
 ### Notes
 * If curl requests to data endpoints fail, check if the script's endpoints are correct by refreshing the `DOCSIS WAN` page with browser tools open to the networking tab or request viewer.
 * Curl requests do not use retry, as this script is intended to run with higher frequency.
+* Curl requests are done over http rather than https. Often the web server has weaker keys, and curl's certificate validation will fail. Using curl with https in spite of this requires the `-k` flag.
