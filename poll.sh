@@ -104,15 +104,19 @@ make_req "$US_OFDM_URL" US_OFDM_OUTPUT
 ################
 # aggregate results into one json doc, and add a timestamp in the data
 
-jq -n\
+JSON_RESULT=$(jq -n\
  --arg timestamp "$MEASUREMENT_TS"\
  --arg timestamp_field "$TS_FIELD"\
  --argjson ds_qam "$DS_QAM_OUTPUT"\
  --argjson us_qam "$US_QAM_OUTPUT"\
  --argjson ds_ofdm "$DS_OFDM_OUTPUT"\
  --argjson us_ofdm "$US_OFDM_OUTPUT"\
- '.[$timestamp_field] = $timestamp | .ds_qam = $ds_qam | .us_qam = $us_qam | .ds_ofdm = $ds_ofdm | .us_ofdm = $us_ofdm'\
- > "$OUT_FILE" || {
-	echo "Error: parsing json result" >&2
+ '.[$timestamp_field] = $timestamp | .ds_qam = $ds_qam | .us_qam = $us_qam | .ds_ofdm = $ds_ofdm | .us_ofdm = $us_ofdm')
+
+if [[ -z "$JSON_RESULT" ]]; then
+	echo "Error: parsing/merging json result" >&2
         exit 1
-}
+fi
+
+# write the file if jq succeeded
+echo "$JSON_RESULT" > "$OUT_FILE"
