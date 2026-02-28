@@ -2,7 +2,7 @@
 
 Inspired by https://github.com/DannyTheVito/Simple-Hitron-Logger/
 
-Retrieve WAN signal data from a hitron device for tracking over time. May work for other modems running hitron's web server.
+Retrieve WAN signal data from a hitron device for tracking over time. May work for other devices running hitron's web server.
 
 For me, this was checking impact of using a coaxial surge protector on WAN signal.
 
@@ -30,4 +30,5 @@ $ jq -r '"\(.timestamp) => \(.ds_qam[3].snr)"' data-20260000_000000.json
 
 ---
 ### Notes
-If curl requests to data endpoints fail, check if the script's endpoints are correct by refreshing the `DOCSIS WAN` page with browser tools open to the networking tab or request viewer.
+* If curl requests to data endpoints fail, check if the script's endpoints are correct by refreshing the `DOCSIS WAN` page with browser tools open to the networking tab or request viewer.
+* Curl requests do not use retry, as this script is intended to run with higher frequency.
