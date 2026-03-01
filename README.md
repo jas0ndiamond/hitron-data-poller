@@ -33,4 +33,4 @@ $ jq -r '"\(.timestamp) => \(.ds_qam[3].snr)"' data-20260000_000000.json
 * If curl requests to data endpoints fail, check if the script's endpoints are correct by refreshing the `DOCSIS WAN` page with browser tools open to the networking tab or request viewer.
 * Curl requests do not use retry, as this script is intended to run with higher frequency.
 * Curl requests are done over http rather than https. Often the web server has weaker keys, and curl's certificate validation will fail. Using curl with https in spite of this requires the `-k` flag.
-** Determine server key length with `echo | openssl s_client -connect 192.168.100.1:443 -servername 192.168.100.1 | openssl x509 -noout -text | grep "Public-Key"`
+  * Determine server key length with `echo | openssl s_client -connect 192.168.100.1:443 -servername 192.168.100.1 | openssl x509 -noout -text | grep "Public-Key"`
