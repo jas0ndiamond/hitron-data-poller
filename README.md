@@ -12,7 +12,7 @@ Run as a cronjob or with unix `watch`.
 ### Setup
 1. Verify `curl` and `jq` are installed
 2. Determine your hitron device ip. Typically this is `192.168.100.1`.
-3. Open http://192.168.100.1 in your browser and look for a `DOCSIS WAN` tab with populated information.
+3. Open the device web page (typically https://192.168.100.1) in a web browser and look for a `DOCSIS WAN` tab with populated information.
 
 ---
 ### Run
