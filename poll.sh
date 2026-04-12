@@ -104,6 +104,9 @@ make_req "$DS_OFDM_URL" DS_OFDM_OUTPUT
 # upstream ofdm
 make_req "$US_OFDM_URL" US_OFDM_OUTPUT
 
+# trim whitespace from US_OFDM fields
+US_OFDM_OUTPUT=$(echo "$US_OFDM_OUTPUT" | sed 's/[[:space:]]\+//g')
+
 ################
 # aggregate results into one json doc, and add a timestamp in the data
 
