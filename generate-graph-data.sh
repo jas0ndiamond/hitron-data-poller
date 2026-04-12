@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# TODO: output schemas and files
+
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIR="${1:-${SCRIPT_DIR}/hitron-data}"
 VERBOSE=false
@@ -40,7 +43,7 @@ echo "Processing $TOTAL_FILES JSON files from: $DIR → $OUTPUT_DIR"
 # Single pass: read each file once, write to all 4 CSVs
 file_count=0
 skipped_count=0
-$VERBOSE && echo "Single-pass processing:"
+$VERBOSE && echo "Processing:"
 
 for file in "${FILES[@]}"; do
   ts=$(jq -r '.timestamp // empty' "$file" 2>/dev/null) || ts=""
@@ -49,29 +52,34 @@ for file in "${FILES[@]}"; do
     ((skipped_count++))
     continue
   fi
-  
+
   ((file_count++))
   $VERBOSE && printf "  %d/%d: %s\r" "$file_count" "$TOTAL_FILES" "$(basename "$file")"
-  
+
   # ds_qam
   jq -r --arg ts "$ts" \
     '.ds_qam[]? | [ $ts, (.portId//"null"), (.signalStrength//"null"), (.snr//"null") ] | @csv' \
     "$file" >> "$OUTPUT_DIR/ds_qam.csv" 2>/dev/null || true
-  
-  # us_qam  
+
+  # us_qam
   jq -r --arg ts "$ts" \
     '.us_qam[]? | [ $ts, (.portId//"null"), (.signalStrength//"null") ] | @csv' \
     "$file" >> "$OUTPUT_DIR/us_qam.csv" 2>/dev/null || true
-  
+
   # ds_ofdm [non-NA]
+  # TODO: some fields seem to have whitespace
+  # TODO: sometimes grabbing the NA channel
   jq -r --arg ts "$ts" \
     '.ds_ofdm[]? | select(.Subcarr0freqFreq != "NA") | [ $ts, (.receive//"null"), (.SNR//"null"), (.Subcarr0freqFreq//"null"), (.plcpower//"null") ] | @csv' \
-    "$file" >> "$OUTPUT_DIR/ds_ofdm.csv" 2>/dev/null || true
-  
+    "$file" | sed 's/^\"\s+*$//' >> "$OUTPUT_DIR/ds_ofdm.csv" 2>/dev/null || true
+
   # us_ofdm [non-DISABLED]
+  # some fields seem to have whitespace
+
+  # TODO: vvv grabbing disabled channel occasionally
   jq -r --arg ts "$ts" \
     '.us_ofdm[]? | select(.state != "DISABLED") | [ $ts, (.uschindex//"null"), (.frequency//"null"), (.digAtten//"null"), (.digAttenBo//"null"), (.repPower//"null"), (.repPower1_6//"null") ] | @csv' \
-    "$file" >> "$OUTPUT_DIR/us_ofdm.csv" 2>/dev/null || true
+    "$file" | sed 's/^\"\s+*$//' >> "$OUTPUT_DIR/us_ofdm.csv" 2>/dev/null || true
 done
 
 # Write headers and sort each CSV
@@ -79,7 +87,7 @@ echo "timestamp,portId,signalStrength_dBmV,snr_dB" > "$OUTPUT_DIR/ds_qam.csv.tmp
 sort -k1,1 "$OUTPUT_DIR/ds_qam.csv" >> "$OUTPUT_DIR/ds_qam.csv.tmp" 2>/dev/null || true
 mv "$OUTPUT_DIR/ds_qam.csv.tmp" "$OUTPUT_DIR/ds_qam.csv"
 
-echo "timestamp,portId,signalStrength_dBmV" > "$OUTPUT_DIR/us_qam.csv.tmp"  
+echo "timestamp,portId,signalStrength_dBmV" > "$OUTPUT_DIR/us_qam.csv.tmp"
 sort -k1,1 "$OUTPUT_DIR/us_qam.csv" >> "$OUTPUT_DIR/us_qam.csv.tmp" 2>/dev/null || true
 mv "$OUTPUT_DIR/us_qam.csv.tmp" "$OUTPUT_DIR/us_qam.csv"
 
@@ -94,9 +102,4 @@ mv "$OUTPUT_DIR/us_ofdm.csv.tmp" "$OUTPUT_DIR/us_ofdm.csv"
 $VERBOSE && echo ""
 echo "✓ Complete: $OUTPUT_DIR/ ($file_count processed, $skipped_count skipped)"
 ls -lh "$OUTPUT_DIR"/*.csv
-echo ""
-echo "Gnuplot (cd $OUTPUT_DIR):"
-echo "set xdata time"
-echo "set timefmt '%Y-%m-%d %H:%M:%S'"
-echo "plot 'ds_qam.csv' using 1:3 with lines title 'Signal Strength'"
 
