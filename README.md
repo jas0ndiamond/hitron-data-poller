@@ -52,14 +52,27 @@ This processes all JSON files in `hitron-data` and creates a `chart-YYYYMMDD-HHM
 - `ds_ofdm.csv` — Downstream OFDM measurements
 
 #### Step 3: Plot Charts
-Generate PNG charts from the CSV data using gnuplot:
+Generate all PNG charts from the CSV data in one command:
+
 ```bash
-./plot.sh chart-YYYYMMDD-HHMMSS/us_qam.csv
-./plot.sh chart-YYYYMMDD-HHMMSS/ds_qam.csv
+./plot.sh chart-YYYYMMDD-HHMMSS
 ```
-This creates PNG files with date-labeled x-axes:
-- `us_qam.png` — Upstream QAM signal over time
-- `ds_qam.png` — Downstream QAM signal and SNR over time
+
+This automatically generates all five charts and places them in the current directory:
+- `us_qam.png` — Upstream QAM signal over time (1000x600)
+- `ds_qam.png` — Downstream QAM signal and SNR over time (1000x600)
+- `us_ofdm.png` — Upstream OFDM transmission power and attenuation over time (1000x600)
+- `ds_ofdm.png` — Downstream OFDM signal and SNR over time (1000x600)
+- `ofdm_combined.png` — Both upstream and downstream OFDM on a dual-panel chart (1400x800)
+
+**Optional:** Include an actions CSV file to annotate events on the charts:
+```bash
+./plot.sh chart-YYYYMMDD-HHMMSS actions.csv
+```
+
+**Pre-flight checks:** The script verifies that all required CSV files exist and are not empty before generating any plots.
+
+All charts use date-labeled x-axes (YYYY-MM-DD format) with rotated labels for readability.
 
 ---
 ### Utils
