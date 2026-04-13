@@ -1,7 +1,26 @@
 #!/bin/bash
 
-# TODO: output schemas and files
-
+# generate-graph-data.sh — Convert Hitron JSON poll data to time-series CSV files
+#
+# Processes raw modem telemetry JSON files (created by poll.sh) and converts them
+# into time-series CSV files organized by signal category (US/DS QAM/OFDM).
+#
+# Features:
+#   - Filters out disabled/inactive channels (DISABLED state, NA values)
+#   - Scrubs leading/trailing whitespace from all field values
+#   - Sorts output by timestamp
+#   - Generates properly formatted CSV headers
+#
+# Usage:
+#   $0 [-v] [-o DIR] [INPUT_DIR]
+#
+# Options:
+#   -v             Verbose mode (show processing details)
+#   -o DIR         Output directory (default: chart-YYYYMMDD-HHMMSS)
+#   -h             Show this help message
+#
+# Arguments:
+#   INPUT_DIR      Input directory with data-*.json (default: ./hitron-data)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIR="${1:-${SCRIPT_DIR}/hitron-data}"
@@ -40,6 +59,9 @@ FILES=($(find "$DIR" -name 'data-*.json' -type f | sort 2>/dev/null || true))
 TOTAL_FILES=${#FILES[@]}
 echo "Processing $TOTAL_FILES JSON files from: $DIR → $OUTPUT_DIR"
 
+# jq filter to trim leading/trailing whitespace from all string values
+TRIM_FILTER='walk(if type == "string" then gsub("^\\s+"; "") | gsub("\\s+$"; "") else . end)'
+
 # Single pass: read each file once, write to all 4 CSVs
 file_count=0
 skipped_count=0
@@ -56,30 +78,28 @@ for file in "${FILES[@]}"; do
   ((file_count++))
   $VERBOSE && printf "  %d/%d: %s\r" "$file_count" "$TOTAL_FILES" "$(basename "$file")"
 
-  # ds_qam
-  jq -r --arg ts "$ts" \
+  # Apply whitespace trimming to the entire JSON, then extract data
+  TRIMMED=$(jq "$TRIM_FILTER" "$file" 2>/dev/null)
+
+  # ds_qam - Extract timestamp, portId, signalStrength, snr
+  echo "$TRIMMED" | jq -r --arg ts "$ts" \
     '.ds_qam[]? | [ $ts, (.portId//"null"), (.signalStrength//"null"), (.snr//"null") ] | @csv' \
-    "$file" >> "$OUTPUT_DIR/ds_qam.csv" 2>/dev/null || true
+    >> "$OUTPUT_DIR/ds_qam.csv" 2>/dev/null || true
 
-  # us_qam
-  jq -r --arg ts "$ts" \
+  # us_qam - Extract timestamp, portId, signalStrength
+  echo "$TRIMMED" | jq -r --arg ts "$ts" \
     '.us_qam[]? | [ $ts, (.portId//"null"), (.signalStrength//"null") ] | @csv' \
-    "$file" >> "$OUTPUT_DIR/us_qam.csv" 2>/dev/null || true
+    >> "$OUTPUT_DIR/us_qam.csv" 2>/dev/null || true
 
-  # ds_ofdm [non-NA]
-  # TODO: some fields seem to have whitespace
-  # TODO: sometimes grabbing the NA channel
-  jq -r --arg ts "$ts" \
-    '.ds_ofdm[]? | select(.Subcarr0freqFreq != "NA") | [ $ts, (.receive//"null"), (.SNR//"null"), (.Subcarr0freqFreq//"null"), (.plcpower//"null") ] | @csv' \
-    "$file" | sed 's/^\"\s+*$//' >> "$OUTPUT_DIR/ds_ofdm.csv" 2>/dev/null || true
+  # ds_ofdm - Filter out NA channels (ffttype != "NA"), extract relevant fields
+  echo "$TRIMMED" | jq -r --arg ts "$ts" \
+    '.ds_ofdm[]? | select(.ffttype != "NA") | [ $ts, (.receive//"null"), (.SNR//"null"), (.Subcarr0freqFreq//"null"), (.plcpower//"null") ] | @csv' \
+    >> "$OUTPUT_DIR/ds_ofdm.csv" 2>/dev/null || true
 
-  # us_ofdm [non-DISABLED]
-  # some fields seem to have whitespace
-
-  # TODO: vvv grabbing disabled channel occasionally
-  jq -r --arg ts "$ts" \
+  # us_ofdm - Filter out DISABLED channels (state != "DISABLED"), extract relevant fields
+  echo "$TRIMMED" | jq -r --arg ts "$ts" \
     '.us_ofdm[]? | select(.state != "DISABLED") | [ $ts, (.uschindex//"null"), (.frequency//"null"), (.digAtten//"null"), (.digAttenBo//"null"), (.repPower//"null"), (.repPower1_6//"null") ] | @csv' \
-    "$file" | sed 's/^\"\s+*$//' >> "$OUTPUT_DIR/us_ofdm.csv" 2>/dev/null || true
+    >> "$OUTPUT_DIR/us_ofdm.csv" 2>/dev/null || true
 done
 
 # Write headers and sort each CSV
