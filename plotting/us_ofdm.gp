@@ -34,7 +34,7 @@ if (ACTIONS_FILE ne "") {
 
     if (file_exists(ACTIONS_FILE)) {
         set table $ACTIONS
-        plot ACTIONS_FILE using 1:(0) with table
+        plot ACTIONS_FILE every ::1 using 1:(0) with table
         unset table
 
         do for [i=1:|$ACTIONS|] {

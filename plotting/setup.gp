@@ -40,7 +40,7 @@ if (strlen(ACTIONS_FILE) > 0) {
     }
     # Read actions into datablock
     set table $ACTIONS
-    plot ACTIONS_FILE using 1:(0) with table
+    plot ACTIONS_FILE every ::1 using 1:(0) with table
     unset table
 }
 
